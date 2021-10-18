@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+	
+
+START=99
+USE_PROCD=1
+
+NEWPLAT_BIN=`which newplat`
+
+start_service() {
+	procd_opennewplat_instance
+	procd_set_param respawn 1 5 5000
+	procd_set_param command "$NEWPLAT_BIN"
+	procd_set_param file /etc/config/newplat
+	procd_close_instance
+}
+
+service_triggers() {
+	procd_add_reload_trigger "newplat"
+}
+
