@@ -21,8 +21,8 @@
 #include <libubus.h>
 #include <cjson/cJSON.h>
 #include <arpa/inet.h>
-#include "loopbuf.h"
-#include "uci.h"
+#include "uci2.h"
+#include <uuid/uuid.h>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -35,10 +35,9 @@ extern int g_debug;
 #if 1
 #define LOGD(fmt, ...) \
 do {\
-	if(g_debug)\
+	if(g_debug) {\
 		syslog(LOG_DEBUG, fmt, ##__VA_ARGS__);\
-	else\
-		printf(fmt "\n", ##__VA_ARGS__);\
+		printf(fmt "\n", ##__VA_ARGS__); }\
 } while (0)
 #endif
 //#define LOGI(...) syslog(LOG_INFO, __VA_ARGS__)
@@ -114,6 +113,7 @@ int mqtt_beat_init();
 void mosquitto_message_process(const struct mosquitto_message *message); 
 int do_tty_msg_publish(char *data, int len, char *topic);
 
+struct mqtt_context* get_mqtt_ctx(void);
 
 /*************************cJSON*******************************/
 void cjson_init();
@@ -132,8 +132,7 @@ static void __attribute((constructor)) __reg_ubus_method_##name() \
 { \
 	add_ubus_method(#name, handler, policy, n_policy); \
 }
-void ubus_app_init();
-bool serv_ubus_init();
+
 void set_ubus_appname(const char *name);
 int ubus_get_int(const char *path, const char *method, const char *param, struct blob_attr *data, int def);
 char *ubus_get_string(const char *path, const char *method, const char *param, struct blob_attr *data);

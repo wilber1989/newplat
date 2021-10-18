@@ -10,12 +10,12 @@ include $(INCLUDE_DIR)/cmake.mk
 define Package/newplat
   SECTION:=wthink
   CATEGORY:=Wthink packages
-  DEPENDS:= +libmosquitto +libpthread +libcjson +libubox +libuci +libubus 
+  DEPENDS:= +libuuid +libmosquitto +libpthread +libcjson +libubox +libuci +libubus 
   TITLE:=newplat
 endef
 
 define Package/newplat/description
-	5G UBX UAV newplat handle
+	5G UBOX UAV newplat handle
 endef
 
 TARGET_CXXFLAGS += -I$(PKG_BUILD_DIR)

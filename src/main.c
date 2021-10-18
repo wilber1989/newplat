@@ -36,11 +36,9 @@ int main(int argc , char *argv[])
 				break;
 		} 
 	}
-	
 	openlog("newplat", LOG_PID, LOG_DAEMON);
 	uloop_init();
 	//1、ubus初始化
-	ubus_app_init();
 	set_ubus_appname("newplat");
 	serv_ubus_init();
 	//2、uci配置初始化
@@ -59,6 +57,5 @@ int main(int argc , char *argv[])
 	uloop_run();
 	uloop_done();
 	closelog();
-
 	return 0;
 }

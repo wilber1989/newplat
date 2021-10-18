@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <uci.h>
+#include <uci2.h>
 #include "uci.h"
 
 static struct uci_ptr ptr;

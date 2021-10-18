@@ -1,11 +1,12 @@
 #include "newplat.h"
 
-void handleOpenSSLErrors(void)
+static void handleOpenSSLErrors()
 {
     unsigned long errCode;
 
     printf("An openssl error occurred\n");
-    while(errCode = ERR_get_error()) {
+    errCode = ERR_get_error();
+    while(errCode) {
         char *err = ERR_error_string(errCode, NULL);
         printf("%s\n", err);
     }
@@ -24,20 +25,21 @@ void handleOpenSSLErrors(void)
 unsigned char* AES_ECB_PKCS5_Encrypt(unsigned char *src, int srcLen, unsigned char *key, int keyLen, int *outLen, bool base64_en)
 {
     EVP_CIPHER_CTX *ctx = NULL;
+    unsigned char* res  = NULL;
     int blockCount = 0;
     int quotient = srcLen / AES_BLOCK_SIZE;
     int mod = srcLen % AES_BLOCK_SIZE;
     blockCount = quotient + 1;
 
     int padding = AES_BLOCK_SIZE - mod;
-    char *in = (char *)malloc(AES_BLOCK_SIZE*blockCount);
+    unsigned char *in = (unsigned char *)malloc(AES_BLOCK_SIZE*blockCount);
     memset(in, padding, AES_BLOCK_SIZE*blockCount);
     memcpy(in, src, srcLen);
 
     //out
-    char *out = (char *)malloc(AES_BLOCK_SIZE*blockCount);
-    memset(out, 0x00, AES_BLOCK_SIZE*blockCount);
-    *outLen = AES_BLOCK_SIZE*blockCount;
+    unsigned char *out = (unsigned char *)malloc(AES_BLOCK_SIZE * blockCount);
+    memset(out, 0x00, AES_BLOCK_SIZE * blockCount);
+    *outLen = AES_BLOCK_SIZE * blockCount;
     
     do {
         if(!(ctx = EVP_CIPHER_CTX_new())) {
@@ -48,26 +50,28 @@ unsigned char* AES_ECB_PKCS5_Encrypt(unsigned char *src, int srcLen, unsigned ch
             handleOpenSSLErrors();
             break;
         }          
-        if(1 != EVP_EncryptUpdate(ctx, (unsigned char*)out, outLen, in, AES_BLOCK_SIZE*blockCount)) {
+        if(1 != EVP_EncryptUpdate(ctx, out, outLen, in, AES_BLOCK_SIZE*blockCount)) {
             handleOpenSSLErrors();    
             break;
         }
 		if(base64_en){
 			//base64 encode 
-			unsigned char* res = (unsigned char*)malloc(outLen * 2);
-        	EVP_EncodeBlock(res, (const unsigned char*)out, outLen);
+			res = (unsigned char*)malloc(*outLen * 2);
+        	EVP_EncodeBlock(res, (const unsigned char*)out, *outLen);
 		}
 
     }while(0);
-    if (ctx != NULL)
+
+    if (ctx != NULL) {
         EVP_CIPHER_CTX_free(ctx);
+    }
 	if(base64_en){	    
     	free(in);
    		free(out);
-    	return (unsigned char*)res;
+    	return res;
 	} else {
 	    free(in);
-    	return (unsigned char*)out;	
+    	return out;	
 	}
 
 }
@@ -85,10 +89,11 @@ unsigned char* AES_ECB_PKCS5_Decrypt(unsigned char *src, int srcLen, unsigned ch
 {
     EVP_CIPHER_CTX *ctx = NULL;
 	unsigned char* in = (unsigned char*)malloc(srcLen);
-    char *out = (char*)malloc(srcLen);
+    unsigned char *out = (unsigned char*)malloc(srcLen);
     do {
 		if(base64_en){	 
-			if((int textlen = EVP_DecodeBlock(in, (const unsigned char*)src, srcLen)) < 0) {
+            int textlen = EVP_DecodeBlock(in, (const unsigned char*)src, srcLen);
+			if( textlen < 0) {
             	handleOpenSSLErrors();
             	break;
         	}
@@ -121,5 +126,5 @@ unsigned char* AES_ECB_PKCS5_Decrypt(unsigned char *src, int srcLen, unsigned ch
     int unpadding = out[*outLen - 1];
     *outLen = *outLen - unpadding;
     out[*outLen] = '\0';
-    return (unsigned char*)out;
+    return out;
 }

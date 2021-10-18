@@ -1,8 +1,11 @@
 #include "newplat.h"
 
-static struct mqtt_context g_mqtt_ctx = {
-	.uav_msg_callback = NULL,
-}; 
+static struct mqtt_context g_mqtt_ctx;
+
+struct mqtt_context* get_mqtt_ctx()
+{
+	return &g_mqtt_ctx;
+}
 
 static int mqtt_uav_recv_callback(char *recv_data, int len)
 {
@@ -22,7 +25,8 @@ int do_tty_msg_publish(char *data, int len, char *topic)
 
 	if (strncmp(topic, "/paas/", strlen("/paas/")) == 0) {
 		if (g_mqtt_ctx.connected_uav) {
-			LOGD("publish data(len=%d) is:%s", len, data);
+			LOGD("publish data(len=%d) is:%s\n", len, data);
+			LOGD("publish topic:%s\n", topic);
 			ret = mosquitto_publish(g_mqtt_ctx.mosq_uav, NULL, topic, len, data, \
 					g_mqtt_ctx.publish_topic_upload_qos, g_mqtt_ctx.publish_topic_upload_retain);
 			if (ret != MOSQ_ERR_SUCCESS) {
@@ -63,7 +67,7 @@ static void mqtt_connect_callback(struct mosquitto *mosq, void *obj, int rc)
 		LOGD("uav mqtt connected");
 		g_mqtt_ctx.connected_uav = 1;
 		if (strlen(device_id)) {
-			sprintf(sub_topic, "mission/%s", device_id);
+			snprintf(sub_topic, TOPIC_MAX_LEN, "/paas/%s/%s/%s", get_product_key(), get_device_id(), g_mqtt_ctx.subscribe_topic);
 			sub_mqtt_topic(mosq, sub_topic);
 		}
 	}
@@ -92,8 +96,8 @@ static void mqtt_message_callback(struct mosquitto *mosq, void *userdata, const 
 
 static int read_mqtt_conf()
 {
-	const char *host = NULL, *port = NULL, *topic = NULL, *head = NULL,*client_id = NULL, 
-	*clean_session = NULL, *qos = NULL, *keepalive = NULL, *retain_msg = NULL, *sub_qos = NULL, *manu = NULL,;
+	const char *host = NULL, *port = NULL, *topic = NULL,  *sub_topic = NULL, *head = NULL,*client_id = NULL, 
+	*clean_session = NULL, *qos = NULL, *keepalive = NULL, *retain_msg = NULL, *sub_qos = NULL, *manu = NULL;
 
 	host = ucix_get_option(ctx, "newplat", "mqtt", "host");
 	if (!host) {
@@ -110,6 +114,12 @@ static int read_mqtt_conf()
 	topic = ucix_get_option(ctx, "newplat", "mqtt", "topic");
 	if (!topic) {
 		LOGE("read mqtt topic conf err!!!");
+		return -1;
+	}
+
+	sub_topic = ucix_get_option(ctx, "newplat", "mqtt", "sub_topic");
+	if (!sub_topic) {
+		LOGE("read mqtt sub_topic conf err!!!");
 		return -1;
 	}
 
@@ -163,16 +173,18 @@ static int read_mqtt_conf()
 		g_mqtt_ctx.uav_msg_callback = NULL;
 	}
 	
-	char sn[7]={0};
+	char* sn = NULL;
 	sn = get_device_id();
 	g_mqtt_ctx.mqtt_name = (char *)sn;
-	unsigned char *key="hb0iojui87890oi9";
+	unsigned char key[17]="hb0iojui87890oi9";
 	int keyLen = 16;
 	int outLen = 0;
-	g_mqtt_ctx.mqtt_password = AES_ECB_PKCS5_Encrypt((unsigned char*)sn, strlen(sn), key, keyLen, &outLen, false);	
+	g_mqtt_ctx.mqtt_password = (char*)AES_ECB_PKCS5_Encrypt((unsigned char*)sn, strlen(sn), key, keyLen, &outLen, true);
+	LOGD("mqtt_password:%s\n",g_mqtt_ctx.mqtt_password);	
 	g_mqtt_ctx.mqtt_host = (char *)host;
 	g_mqtt_ctx.mqtt_port = atoi(port);
 	g_mqtt_ctx.publish_topic_upload = (char *)topic;
+	g_mqtt_ctx.subscribe_topic = (char *)sub_topic;
 	g_mqtt_ctx.mqtt_message_header = (char *)head;
 	g_mqtt_ctx.mqtt_clientId = (char *)client_id;
 	g_mqtt_ctx.publish_topic_upload_qos = atoi(qos);
@@ -208,9 +220,6 @@ int mqtt_init()
 
 	mosquitto_lib_init();
 	//平台mqtt设置
-	g_mqtt_ctx.mqtt_name = (char *)user;
-	g_mqtt_ctx.mqtt_password = (char *)passwd;
-
 	g_mqtt_ctx.mosq_uav = mosquitto_new(NULL, true, NULL);
 	if (!g_mqtt_ctx.mosq_uav) {
 		LOGE("uav Out of memory.");
