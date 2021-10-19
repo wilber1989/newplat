@@ -176,7 +176,7 @@ static int read_mqtt_conf()
 	char* sn = NULL;
 	sn = get_device_id();
 	g_mqtt_ctx.mqtt_name = (char *)sn;
-	unsigned char key[17]="hb0iojui87890oi9";
+	unsigned char* key = (unsigned char*)get_device_key();
 	int keyLen = 16;
 	int outLen = 0;
 	g_mqtt_ctx.mqtt_password = (char*)AES_ECB_PKCS5_Encrypt((unsigned char*)sn, strlen(sn), key, keyLen, &outLen, true);

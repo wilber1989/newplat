@@ -3,10 +3,12 @@
 #define PROTOCOL_VERSION "1.0"
 #define DEVICE_ID_MAX 7
 #define PRODUCT_KEY_MAX 20
+#define DEVICE_KEY_MAX 20
 #define UUID_MAX 40
 
 static char g_device_id[DEVICE_ID_MAX] = {0};
-static char g_product_key[PRODUCT_KEY_MAX] = {0};
+static char g_product_key[PRODUCT_KEY_MAX] = "7060j90u98y928y98y";
+static char g_device_key[DEVICE_KEY_MAX] = "hb0iojui87890oi9";
 static char g_uuid[UUID_MAX] = {0};
 
 static pthread_mutex_t g_mutex;
@@ -24,13 +26,18 @@ static struct dev_data g_uav_data;
 char* get_device_id()
 {
 	get_dev_sn(g_device_id);
+	//memcpy(&g_device_id, "d72e64", 6);
 	return g_device_id;
 }
 
 char* get_product_key()
 {
-	memcpy(g_product_key, "7060j90u98y928y98y", strlen("7060j90u98y928y98y"));
 	return g_product_key;
+}
+
+char* get_device_key()
+{
+	return g_device_key;
 }
 
 static void random_uuid(char* buf)
@@ -80,15 +87,10 @@ static cJSON *cjson_create_uav_data()
 	if (g_uav_data.flight_time) {
 		fly_time = g_uav_data.flight_time;
 	}
-	int time = 0;//时间戳
+	long time = 0;//时间戳
 	if(g_uav_data.time)
 	{
-		time = atoi(g_uav_data.time);
-	}
-	int coordinate = 0;
-	if(g_uav_data.lng)
-	{
-		coordinate = g_uav_data.coordinate;
+		time = atol(g_uav_data.time);
 	}
 	cJSON *uav = cJSON_CreateObject();
 	cJSON *value = cJSON_CreateObject();
@@ -99,7 +101,7 @@ static cJSON *cjson_create_uav_data()
 
 	cJSON_AddItemToObject(value, "type", cJSON_CreateString("ubox"));
 	cJSON_AddItemToObject(value, "flightTime", cJSON_CreateNumber(fly_time));
-	cJSON_AddItemToObject(value, "coordinate", cJSON_CreateNumber(coordinate));
+	cJSON_AddItemToObject(value, "coordinate", cJSON_CreateNumber(g_uav_data.coordinate));
 	cJSON_AddItemToObject(value, "longitude", cJSON_CreateNumber(g_uav_data.lng));
 	cJSON_AddItemToObject(value, "latitude", cJSON_CreateNumber(g_uav_data.lat));
 	cJSON_AddItemToObject(value, "height", cJSON_CreateNumber(g_uav_data.height));
@@ -158,7 +160,8 @@ static void cjson_creat_post_data()
 {
 
 	char *out = NULL;
-	char* out_base64 = NULL;
+	unsigned char* out_base64 = NULL;
+	int base64_len =0;
 	cJSON *root = NULL;
 	cJSON *data = NULL;
 
@@ -169,13 +172,12 @@ static void cjson_creat_post_data()
 	
 	data = cjson_create_params_data();
 	cJSON_AddItemToObject(root, "params", data);	
-
 	out = cJSON_Print(root);
 	cJSON_Delete(root);
-	out_base64 = (unsigned char*)malloc(strlen(out) * 2);
-    EVP_EncodeBlock(out_base64, (const unsigned char*)out, strlen(out));
-	cjson_msg_add(out_base64);
-
+	unsigned char* key = (unsigned char*)get_device_key();
+    out_base64 = AES_ECB_PKCS5_Encrypt((unsigned char *)out, strlen(out), key, 16, &base64_len, true);
+	cjson_msg_add((char*)out_base64);
+	free(out_base64);
 	free(out);
 }
 

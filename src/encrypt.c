@@ -4,11 +4,11 @@ static void handleOpenSSLErrors()
 {
     unsigned long errCode;
 
-    printf("An openssl error occurred\n");
+    LOGE("An openssl error occurred\n");
     errCode = ERR_get_error();
     while(errCode) {
         char *err = ERR_error_string(errCode, NULL);
-        printf("%s\n", err);
+        LOGE("%s\n", err);
     }
 }
 /* AES_ECB_PKCS5_BASE64_Encrypt
@@ -32,15 +32,13 @@ unsigned char* AES_ECB_PKCS5_Encrypt(unsigned char *src, int srcLen, unsigned ch
     blockCount = quotient + 1;
 
     int padding = AES_BLOCK_SIZE - mod;
-    unsigned char *in = (unsigned char *)malloc(AES_BLOCK_SIZE*blockCount);
+    unsigned char *in = (unsigned char *)malloc(AES_BLOCK_SIZE * blockCount);
     memset(in, padding, AES_BLOCK_SIZE*blockCount);
     memcpy(in, src, srcLen);
-
     //out
     unsigned char *out = (unsigned char *)malloc(AES_BLOCK_SIZE * blockCount);
     memset(out, 0x00, AES_BLOCK_SIZE * blockCount);
     *outLen = AES_BLOCK_SIZE * blockCount;
-    
     do {
         if(!(ctx = EVP_CIPHER_CTX_new())) {
             handleOpenSSLErrors();
@@ -61,16 +59,14 @@ unsigned char* AES_ECB_PKCS5_Encrypt(unsigned char *src, int srcLen, unsigned ch
 		}
 
     }while(0);
-
     if (ctx != NULL) {
         EVP_CIPHER_CTX_free(ctx);
-    }
-	if(base64_en){	    
-    	free(in);
+    }  
+    free(in);
+	if(base64_en){	
    		free(out);
     	return res;
 	} else {
-	    free(in);
     	return out;	
 	}
 

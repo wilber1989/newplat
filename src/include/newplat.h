@@ -122,6 +122,7 @@ char* get_device_id();
 char* get_uasid();
 char* get_product_key();
 char* get_uuid();
+char* get_device_key();
 
 /****************************uci******************************/
 extern struct uci_context *ctx;
